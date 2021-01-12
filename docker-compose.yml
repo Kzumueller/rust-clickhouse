@@ -1,0 +1,11 @@
+services:
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+    volumes: 
+      - ./initDB.sql:/docker-entrypoint-initdb.d/initDB.sql
+    ports: 
+      - "8123:8123"
+      - "9004:9004"
+
+volumes:
+  .:
