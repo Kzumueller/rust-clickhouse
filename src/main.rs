@@ -1,4 +1,4 @@
-//extern crate mysql;
+extern crate mysql;
 
 use mysql::*;
 use mysql::prelude::*;
@@ -6,7 +6,7 @@ use mysql::prelude::*;
 struct Entry {
     name: String,
     value: f64,
-    time: u64,
+    time: i64,
 }
 
 
@@ -17,29 +17,37 @@ fn main() {
     connection.query_drop("CREATE TABLE IF NOT EXISTS `test` (
         `name` String,
         `value` Float64,
-        `time` DateTime64(3)
+        `time` Int64
     ) ENGINE=Log").unwrap();
+
+    println!("Table created");
 
     let entries = vec![
         Entry{name: "AAPL".into(), value: 128.92, time: 1610489275855},
         Entry{name: "AAPL".into(), value: 129.68, time: 1610489275915},
         Entry{name: "AAPL".into(), value: 129.89, time: 1610489275975},
     ];
+    
+    let value_statements : Vec<String> = entries.iter().map(|entry| {
+        format!("('{}', {}, {})", entry.name, entry.value, entry.time)
+    }).collect();
+    
+    let test = format!("INSERT INTO `test` (name, value, time) VALUES {}", value_statements.join(","));
 
-    connection.exec_batch("INSERT INTO `test`
-        (*)
-        VALUES (:name, :value, :time)",
-        entries.iter().map(|entry| params! {
-            ":name" => &entry.name,
-            ":value" => entry.value,
-            ":time" => entry.time
-        })
-    ).unwrap();
+    println!("{}", test);
 
-    let sorted = connection.query_map("SELECT * FROM `test` ORDER BY `value` DESC", |(name, value, time)| {
-        Entry {name, value, time}
+    connection.query_drop(
+        format!("INSERT INTO `test` (name, value, time) VALUES {}", value_statements.join(","))
+    );
+
+    println!("data inserted");
+
+    let sorted : std::vec::Vec<Entry> = connection.query_map("SELECT * FROM `test` ORDER BY `value` DESC LIMIT 100", |(name, value, time)| {
+        Entry { name, value, time }
     }).unwrap();
 
 
-    println!("highestValue: {} {} {}", sorted[0].value, sorted[0].name, sorted[0].time);
+    for entry in sorted {
+        println!("{} {} {}", entry.name, entry.value, entry.time);
+    }
 }
